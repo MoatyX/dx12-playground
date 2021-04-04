@@ -12,9 +12,10 @@ void triangle::on_init()
 
 	rest_cmd();
 
+	create_const_buffer();
 	create_root_signature();
-	set_pipeline_state();
 	create_vertex_buffer();
+	set_pipeline_state();
 
 	m_cmd_list_->Close();
 	ID3D12CommandList* ppCommandLists[] = { m_cmd_list_.Get() };
@@ -23,14 +24,6 @@ void triangle::on_init()
 }
 
 void triangle::on_pre_render()
-{
-}
-
-void triangle::on_post_render()
-{
-}
-
-void triangle::on_render()
 {
 	//reset the commands list and reuse the allocated memory
 	THROW_IF_FAILED(m_cmd_allocator_->Reset());
@@ -57,7 +50,10 @@ void triangle::on_render()
 		true, &dsv_cpu_handle);
 
 	m_cmd_list_->ClearRenderTargetView(rtvHandle, DirectX::Colors::LightSteelBlue, 0, nullptr);
+}
 
+void triangle::on_render()
+{
 	//render
 	m_cmd_list_->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	auto vertex_buffer_view = m_triangle_.vertex_buffer_view();
@@ -72,7 +68,19 @@ void triangle::on_render()
 		D3D12_RESOURCE_STATE_RENDER_TARGET,
 		D3D12_RESOURCE_STATE_PRESENT);
 	m_cmd_list_->ResourceBarrier(1, &trans2);
+}
 
+void triangle::on_update()
+{	
+	//update the constant buffer
+	static per_obj_cb triangle;
+	triangle.world_view_proj = math_help::identity4x4();
+
+	m_triangle_cb_->copy_data(&triangle);
+}
+
+void triangle::on_post_render()
+{
 	m_cmd_list_->Close();
 
 	// Execute the command list.
@@ -134,13 +142,35 @@ void triangle::set_pipeline_state()
 
 void triangle::create_root_signature()
 {
-	//create an empty root signature
-	CD3DX12_ROOT_SIGNATURE_DESC root_sig;
-	root_sig.Init(0, nullptr, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+	// Create a root signature consisting of a descriptor table with a single CBV.
+	D3D12_FEATURE_DATA_ROOT_SIGNATURE feature_data = {};
+
+	// This is the highest version the sample supports. If CheckFeatureSupport succeeds, the HighestVersion returned will not be greater than this.
+	feature_data.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
+	if (FAILED(m_gpu_->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, &feature_data, sizeof(feature_data))))
+	{
+		feature_data.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
+	}
+
+	CD3DX12_DESCRIPTOR_RANGE1 cbv_ranges[1];
+	CD3DX12_ROOT_PARAMETER1 root_parameters[1];
+	cbv_ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
+	root_parameters[0].InitAsDescriptorTable(1, cbv_ranges, D3D12_SHADER_VISIBILITY_VERTEX);
+
+	// Allow input layout and deny unnecessary access to certain pipeline stages.
+	const D3D12_ROOT_SIGNATURE_FLAGS root_signature_flags =
+		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
+		D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
+		D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
+		D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS |
+		D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS;
+
+	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC root_sig_desc;
+	root_sig_desc.Init_1_1(_countof(root_parameters), root_parameters, 0, nullptr, root_signature_flags);
 
 	Microsoft::WRL::ComPtr<ID3DBlob> signature;
 	Microsoft::WRL::ComPtr<ID3DBlob> error;
-	THROW_IF_FAILED(D3D12SerializeRootSignature(&root_sig, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error));
+	THROW_IF_FAILED(D3D12SerializeVersionedRootSignature(&root_sig_desc, &signature, &error));
 	THROW_IF_FAILED(m_gpu_->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_root_signature_)));
 	
 }
@@ -164,4 +194,18 @@ void triangle::create_vertex_buffer()
 	m_triangle_ = geometry(triangle_size, sizeof(simple_vertex), sizeof(indices));
 	m_triangle_.vertex_buffer_gpu = create_default_buffer(m_gpu_.Get(), m_cmd_list_.Get(), triangle_vertices, triangle_size, m_triangle_.vertex_buffer_uploader);
 	m_triangle_.index_buffer_gpu = create_default_buffer(m_gpu_.Get(), m_cmd_list_.Get(), indices, sizeof(indices), m_triangle_.index_buffer_uploader);
+}
+
+void triangle::create_const_buffer()
+{
+	/*first create the heap for it*/
+	//we are going to draw one object, so make place for 1 cbv descriptor
+	D3D12_DESCRIPTOR_HEAP_DESC cbv_desc = {D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0};
+	m_gpu_->CreateDescriptorHeap(&cbv_desc, IID_PPV_ARGS(&m_cbv_heap_));
+
+	/*now create the constant buffer*/
+	m_triangle_cb_ = std::make_unique<upload_buffer<per_obj_cb>>(m_gpu_.Get(), 1);
+	std::cout << sizeof(per_obj_cb);
+	D3D12_CONSTANT_BUFFER_VIEW_DESC cbv = { m_triangle_cb_->get_resource()->GetGPUVirtualAddress(), sizeof(per_obj_cb) };
+	m_gpu_->CreateConstantBufferView(&cbv, m_cbv_heap_->GetCPUDescriptorHandleForHeapStart());
 }

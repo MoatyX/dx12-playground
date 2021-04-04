@@ -17,3 +17,5 @@
 
 #define __ALIGNED(x) __declspec(align((x)))
 
+#define __CONST_BUFFER __ALIGNED(256)
+
