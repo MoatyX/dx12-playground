@@ -21,3 +21,5 @@ void get_hardware_adapter(IDXGIFactory1* p_factory, IDXGIAdapter1** pp_adapter, 
 /// <returns>reference to the resource on the default heap on the GPU</returns>
 Microsoft::WRL::ComPtr<ID3D12Resource> create_default_buffer(ID3D12Device* gpu, ID3D12GraphicsCommandList* cmd_list, const void* data, uint64_t size_byte,
 	Microsoft::WRL::ComPtr<ID3D12Resource>& upload_buffer);
+
+std::string get_filename_from_path(const std::string& path);

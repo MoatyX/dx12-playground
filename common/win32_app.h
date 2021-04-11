@@ -1,6 +1,7 @@
 #pragma once
 
 #include "dx_app_base.h"
+#include "simple_input.h"
 
 #if defined(_DEBUG) || defined(DEBUG)
 #define WIN32_ALLOC_CONSOLE true
@@ -8,6 +9,9 @@
 #define WIN32_ALLOC_CONSOLE false
 #endif
 
+/**
+ * \brief simple static class that creates a window to run dx12 apps inside
+ */
 class win32_app
 {
 public:
@@ -17,7 +21,7 @@ public:
 	 */
 	static int run(dx_app_base* dx_app, HINSTANCE hinstance, int cmd_show, bool alloc_console);
 	static HWND get_window();
-	static float get_aspect_ration();
+	static float get_aspect_ratio();
 
 protected:
 	/// <summary>
@@ -30,10 +34,11 @@ protected:
 	/// <returns></returns>
 	static LRESULT CALLBACK window_events(HWND window, UINT message, WPARAM wparam, LPARAM lparam);
 
-
 private:
 	static HWND m_window_;
 	static float m_width_;
 	static float m_height_;
+
+	static bool cmd_;
 };
 

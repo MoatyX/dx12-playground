@@ -70,7 +70,6 @@ ID3D12Resource* upload_buffer<T>::get_resource() const
 template <typename T>
 void upload_buffer<T>::copy_data(const T* data)
 {
-	memcpy(m_mapped_data_, data, 256);
-	//memset(m_mapped_data_, 0x00007ff64521d100, m_size);
+	memcpy(m_mapped_data_, data, sizeof(data));
 }
 

@@ -2,6 +2,12 @@
 #include <fcntl.h>
 #include <iostream>
 
+void update_keys_state(simple_input& input, WPARAM new_key, simple_input::key_state new_state)
+{
+	input.last_key_ = new_key;
+	input.last_key_state_ = new_state;
+}
+
 HWND win32_app::m_window_ = nullptr;
 
 int win32_app::run(dx_app_base* dx_app, HINSTANCE hinstance, int cmd_show, bool alloc_cmd = false)
@@ -32,7 +38,7 @@ int win32_app::run(dx_app_base* dx_app, HINSTANCE hinstance, int cmd_show, bool 
 		window_rect.bottom - window_rect.top, nullptr, nullptr, hinstance, dx_app);
 
 	if (alloc_cmd)
-	{
+	{		
 		AllocConsole();
 		freopen_s(reinterpret_cast<FILE**>(stdout), "CONOUT$", "w", stdout);	//redirect stdio to the new console
 
@@ -51,7 +57,7 @@ int win32_app::run(dx_app_base* dx_app, HINSTANCE hinstance, int cmd_show, bool 
 	while (msg.message != WM_QUIT)
 	{
 		//process win32 messages
-		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+		if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
 		{
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
@@ -61,7 +67,10 @@ int win32_app::run(dx_app_base* dx_app, HINSTANCE hinstance, int cmd_show, bool 
 	//when the win32 application quits, do clean up
 	dx_app->on_destroy();
 
-	if (alloc_cmd) FreeConsole();
+	
+	if (alloc_cmd) {
+		FreeConsole();
+	}
 
 	return static_cast<char>(msg.wParam);
 }
@@ -73,13 +82,14 @@ HWND win32_app::get_window()
 
 float win32_app::m_width_ = 0;
 float win32_app::m_height_ = 0;
-float win32_app::get_aspect_ration()
+float win32_app::get_aspect_ratio()
 {
 	return (static_cast<float>(m_width_) / static_cast<float>(m_height_));
 }
 
 LRESULT win32_app::window_events(HWND window, UINT message, WPARAM wparam, LPARAM lparam)
 {
+	static simple_input* input = simple_input::instance();
 	dx_app_base* dx_app = reinterpret_cast<dx_app_base*>(GetWindowLongPtr(window, GWLP_USERDATA));
 
 	switch (message)
@@ -91,19 +101,25 @@ LRESULT win32_app::window_events(HWND window, UINT message, WPARAM wparam, LPARA
 		}
 		return 0;
 	case WM_PAINT:
-		dx_app->on_update();
-		dx_app->on_pre_render();
+		dx_app->on_update();			//update game state
+		dx_app->on_pre_render();		//render new game state
 		dx_app->on_render();
 		dx_app->on_post_render();
 		return 0;
-	case WM_QUIT:
+	case WM_CLOSE:
+		FreeConsole();
 		PostQuitMessage(0);
 		return 0;
 	case WM_KEYDOWN:
-		if(wparam == VK_F1)
+		if (input)	
 		{
-			printf("f1 was pressed!");
-			PostQuitMessage(0);
+			update_keys_state(*input, wparam, simple_input::key_state::down);
+		}
+		return 0;
+	case WM_KEYUP:
+		if (input)
+		{
+			update_keys_state(*input, wparam, simple_input::key_state::up);
 		}
 		return 0;
 	case WM_SIZE:
@@ -111,7 +127,7 @@ LRESULT win32_app::window_events(HWND window, UINT message, WPARAM wparam, LPARA
 		m_height_ = HIWORD(lparam);
 		return 0;
 	default:
-			break;
+		break;
 	}
 
 	// Handle any messages the switch statement didn't.

@@ -116,6 +116,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>D:\Projects\dx12\common\spdlog;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -130,6 +131,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>D:\Projects\dx12\common\vendor\;</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -146,6 +148,7 @@
     <ClInclude Include="geometry.h" />
     <ClInclude Include="macros.h" />
     <ClInclude Include="math_help.h" />
+    <ClInclude Include="simple_input.h" />
     <ClInclude Include="simple_vertex.h" />
     <ClInclude Include="upload_buffer.h" />
     <ClInclude Include="utility.h" />
@@ -155,6 +158,7 @@
     <ClCompile Include="dx_app_base.cpp" />
     <ClCompile Include="exceptions.cpp" />
     <ClCompile Include="geometry.cpp" />
+    <ClCompile Include="simple_input.cpp" />
     <ClCompile Include="simple_vertex.cpp" />
     <ClCompile Include="utility.cpp" />
     <ClCompile Include="win32_app.cpp" />

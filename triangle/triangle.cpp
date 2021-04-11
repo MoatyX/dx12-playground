@@ -8,7 +8,7 @@
 
 void triangle::on_init()
 {
-	std::cout << "Triangle App: draw a triangle on the screen" << std::endl;
+	LOG_INFO("Triangle App: draw a triangle on the screen");
 
 	rest_cmd();
 
@@ -21,6 +21,8 @@ void triangle::on_init()
 	ID3D12CommandList* ppCommandLists[] = { m_cmd_list_.Get() };
 	m_cmd_queue_->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 	wait_cmd_queue_finished();
+
+	input_ = simple_input::instance();
 }
 
 void triangle::on_pre_render()
@@ -35,6 +37,11 @@ void triangle::on_pre_render()
 	m_cmd_list_->RSSetViewports(1, &m_vp_);
 	m_cmd_list_->RSSetScissorRects(1, &m_rect_);
 
+	//set desc heap
+	ID3D12DescriptorHeap* ppHeaps[] = { m_cbv_heap_.Get() };
+	m_cmd_list_->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+	m_cmd_list_->SetGraphicsRootDescriptorTable(0, m_cbv_heap_->GetGPUDescriptorHandleForHeapStart());
+	
 	//transition the back buffer as a render target
 	auto trans = CD3DX12_RESOURCE_BARRIER::Transition(
 		m_swap_chain_buffers_[m_current_back_buffer_index_].Get(),
@@ -71,11 +78,23 @@ void triangle::on_render()
 }
 
 void triangle::on_update()
-{	
-	//update the constant buffer
-	static per_obj_cb triangle;
-	triangle.world_view_proj = math_help::identity4x4();
+{
+	static bool play_offset = false;
+	
+	if (input_->is_key_down(VK_F1)) play_offset = !play_offset;
 
+	if (!play_offset) return;
+	
+	//update the constant buffer
+	const float offset = 1.5f;
+	const float speed = 1.0 / 144.0;
+	static per_obj_cb triangle;
+	//triangle.world_view_proj = math_help::identity4x4();
+	triangle.offset.x += speed;
+	if(triangle.offset.x > offset)
+	{
+		triangle.offset.x = -offset;
+	}
 	m_triangle_cb_->copy_data(&triangle);
 }
 
@@ -87,7 +106,7 @@ void triangle::on_post_render()
 	ID3D12CommandList* ppCommandLists[] = { m_cmd_list_.Get() };
 	m_cmd_queue_->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
-	THROW_IF_FAILED(m_swap_chain_->Present(0, 0));
+	THROW_IF_FAILED(m_swap_chain_->Present(1, 0));
 	m_current_back_buffer_index_ = m_swap_chain_->GetCurrentBackBufferIndex();
 
 	wait_cmd_queue_finished();
@@ -172,7 +191,6 @@ void triangle::create_root_signature()
 	Microsoft::WRL::ComPtr<ID3DBlob> error;
 	THROW_IF_FAILED(D3D12SerializeVersionedRootSignature(&root_sig_desc, &signature, &error));
 	THROW_IF_FAILED(m_gpu_->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_root_signature_)));
-	
 }
 
 void triangle::create_vertex_buffer()
@@ -196,16 +214,17 @@ void triangle::create_vertex_buffer()
 	m_triangle_.index_buffer_gpu = create_default_buffer(m_gpu_.Get(), m_cmd_list_.Get(), indices, sizeof(indices), m_triangle_.index_buffer_uploader);
 }
 
+
 void triangle::create_const_buffer()
 {
+
 	/*first create the heap for it*/
 	//we are going to draw one object, so make place for 1 cbv descriptor
-	D3D12_DESCRIPTOR_HEAP_DESC cbv_desc = {D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0};
-	m_gpu_->CreateDescriptorHeap(&cbv_desc, IID_PPV_ARGS(&m_cbv_heap_));
+	D3D12_DESCRIPTOR_HEAP_DESC cbv_desc = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 };
+	THROW_IF_FAILED(m_gpu_->CreateDescriptorHeap(&cbv_desc, IID_PPV_ARGS(&m_cbv_heap_)));
 
 	/*now create the constant buffer*/
 	m_triangle_cb_ = std::make_unique<upload_buffer<per_obj_cb>>(m_gpu_.Get(), 1);
-	std::cout << sizeof(per_obj_cb);
 	D3D12_CONSTANT_BUFFER_VIEW_DESC cbv = { m_triangle_cb_->get_resource()->GetGPUVirtualAddress(), sizeof(per_obj_cb) };
 	m_gpu_->CreateConstantBufferView(&cbv, m_cbv_heap_->GetCPUDescriptorHandleForHeapStart());
 }

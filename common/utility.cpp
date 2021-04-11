@@ -105,3 +105,8 @@ Microsoft::WRL::ComPtr<ID3D12Resource> create_default_buffer(ID3D12Device* gpu, 
 	//the last 3 calls are appended to the GPU. so all buffers must be kept alive until the copying have been done. thankfully with ComPtr, this is handled for us automatically
 	return default_buffer;
 }
+
+std::string get_filename_from_path(const std::string& path)
+{
+	return path.substr(path.find_last_of("\\") + 1);
+}
