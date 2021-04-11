@@ -2,6 +2,7 @@
 
 #include "dx12.h"
 
+
 class dx_app_base
 {
 public:

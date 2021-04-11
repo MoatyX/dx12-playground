@@ -168,9 +168,9 @@ void dx_app_base::create_swap_chain()
 	//swap chain uses commands queue to perform the buffer flush
 	Microsoft::WRL::ComPtr<IDXGISwapChain1> swap_chain;
 	THROW_IF_FAILED(m_factory4_->CreateSwapChainForHwnd(m_cmd_queue_.Get(), window, &swd, nullptr, nullptr, &swap_chain))
-	THROW_IF_FAILED(swap_chain.As(&m_swap_chain_))
+	THROW_IF_FAILED(swap_chain.As(&m_swap_chain_));
 
-	m_swap_chain_->GetCurrentBackBufferIndex();
+	m_current_back_buffer_index_ = m_swap_chain_->GetCurrentBackBufferIndex();
 }
 
 void dx_app_base::create_dsv_res()

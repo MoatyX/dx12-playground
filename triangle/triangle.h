@@ -3,6 +3,7 @@
 #include "dx_app_base.h"
 #include "geometry.h"
 #include "upload_buffer.h"
+#include "simple_input.h"
 
 /// <summary>
 /// simple dx12 app that tries to draw a triangle on the screen
@@ -21,6 +22,8 @@ public:
 
 	void on_update() override;
 
+	void bind_input_system(simple_input* input) { input_ = input; };
+
 private:
 	void set_pipeline_state();
 	void create_root_signature();
@@ -32,7 +35,8 @@ private:
 	/// </summary>
 	struct __CONST_BUFFER per_obj_cb
 	{
-		DirectX::XMFLOAT4X4 world_view_proj = math_help::identity4x4();
+		//DirectX::XMFLOAT4X4 world_view_proj = math_help::identity4x4();
+		DirectX::XMFLOAT4 offset;
 	};
 
 private:
@@ -48,5 +52,7 @@ private:
 	
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_cbv_heap_;		//constant buffer heap
 	std::unique_ptr<upload_buffer<per_obj_cb>> m_triangle_cb_;
+
+	simple_input* input_;
 };
 

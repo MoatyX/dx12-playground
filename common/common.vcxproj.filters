@@ -48,6 +48,9 @@
     <ClInclude Include="math_help.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="simple_input.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dx_app_base.cpp">
@@ -66,6 +69,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="geometry.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="simple_input.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
